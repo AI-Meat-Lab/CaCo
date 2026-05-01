@@ -164,20 +164,26 @@ def RPS(infile, ofile):
                 x = '\t'.join(x)
                 ofile.write(f'{x}\n')
     
-    
 def extract_feat(infolder, subs):
-    with open(f'allfams.tsv', 'a+') as handle:
+    # Use write mode to overwrite any previous file
+    with open('allfams.tsv', 'w') as handle:
         handle.write('genome\tfamilies\n')
-        with open(f'allsubs.tsv', 'a+') as handle1:
+        with open('allsubs.tsv', 'w') as handle1:
             handle1.write('genome\tsubstrates\n')
             for infile in tqdm(glob(f'{infolder}/*.dbcan.parsed')):
                 namea = infile.split('/')[-1].replace('.dbcan.parsed', '')
                 a = pd.read_table(infile)
                 a = set(a.Hit_Name)
                 a = {x.split('_')[0] for x in a}
+                # Sort families alphabetically
+                sorted_families = sorted(a)
+                
                 subsa = set(', '.join([subs.get(y, '') for y in a if y in subs]).split(', '))
-                handle.write(f"{namea}\t{', '.join(a)}\n")
-                handle1.write(f"{namea}\t{', '.join(subsa)}\n")
+                # Sort substrates alphabetically
+                sorted_substrates = sorted(subsa)
+                
+                handle.write(f"{namea}\t{', '.join(sorted_families)}\n")
+                handle1.write(f"{namea}\t{', '.join(sorted_substrates)}\n")
 
 
 def calculate_overlap_probability(n1, n2, k, num_trials=1000):
