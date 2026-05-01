@@ -34,45 +34,33 @@ jobs:
       run: |
         python3 CaCo.py -m download
 
-    - name: List repository contents (debug)
+    - name: Run example commands
       shell: bash -l {0}
       run: |
-        echo "=== Root directory ==="
-        ls -la
-        echo "=== Looking for example files ==="
-        find . -name "*.fa" -o -name "*.faa" -o -name "gltest.txt" | head -20
-
-    - name: Run example commands (using local files)
-      shell: bash -l {0}
-      run: |
-        # Adjust these paths to match where your files actually are
-        # Common possibilities: ./example/ , ./tests/data/ , ./
-        GLTEST="example/gltest.txt"
-        FA1="example/TARA_SAMEA2620259_METAG_HFKLHEHB.fa"
-        FA2="example/TARA_SAMN05326651_METAG_RED00102.fa"
-        FAA1="example/TARA_SAMEA2620259_METAG_HFKLHEHB.faa"
-        FAA2="example/TARA_SAMN05326651_METAG_RED00102.faa"
+        # Files are in tests/example/ as confirmed by debug output
+        GLTEST="tests/example/gltest.txt"
+        FA1="tests/example/TARA_SAMEA2620259_METAG_HFKLHEHB.fa"
+        FA2="tests/example/TARA_SAMN05326651_METAG_RED00102.fa"
+        FAA1="tests/example/TARA_SAMEA2620259_METAG_HFKLHEHB.faa"
+        FAA2="tests/example/TARA_SAMN05326651_METAG_RED00102.faa"
         
-        # Check existence
-        MISSING=0
+        # Verify all exist
         for f in "$GLTEST" "$FA1" "$FA2" "$FAA1" "$FAA2"; do
           if [ ! -f "$f" ]; then
             echo "❌ Missing: $f"
-            MISSING=1
+            exit 1
           fi
         done
-        if [ $MISSING -eq 1 ]; then
-          echo "Please update the paths in this workflow to match your repository structure."
-          exit 1
-        fi
         
-        # Run tests
+        # Test 1: Genome groups
         echo "Running genome groups test"
         python3 CaCo.py -m from_nucleotides -gl "$GLTEST"
         
+        # Test 2: Pairwise contigs
         echo "Running pairwise contigs test"
         python3 CaCo.py -m from_nucleotides -g1 "$FA1" -g2 "$FA2"
         
+        # Test 3: Pairwise proteins
         echo "Running pairwise proteins test"
         python3 CaCo.py -m from_proteins -g1 "$FAA1" -g2 "$FAA2"
 
@@ -96,7 +84,7 @@ jobs:
         # Decompress expected competition output
         unxz -c tests/expected_res/carboncomp_output.tsv.xz > expected_competition.tsv
         
-        # Compare generated files (they appear in the current directory)
+        # Compare generated files (CaCo writes them in current directory)
         echo "Comparing allfams.tsv..."
         diff -u allfams.tsv tests/expected_res/allfams.tsv || \
           (echo "❌ allfams.tsv does not match expected output" && exit 1)
