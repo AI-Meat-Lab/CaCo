@@ -23,7 +23,7 @@ def download_db():
     os.makedirs(ofolder, exist_ok=True)
     run(['wget',
          '-O', f'{ofolder}/dbcan.hmm',
-         'https://bcb.unl.edu/dbCAN2/download/dbCAN-HMMdb-V11.txt'])
+         'https://pro.unl.edu/dbCAN2/download_file.php?file=dbCAN-HMMdb-V11.txt'])
 
 
 def dbcansearch(infile, ofolder, db):
