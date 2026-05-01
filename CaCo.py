@@ -24,10 +24,10 @@ def download_db():
     file_path = f'{ofolder}/dbcan.hmm'
     
     # Download the file
-    result = subprocess.run(['wget',
-                             '-O', file_path,
-                             'https://pro.unl.edu/dbCAN2/download_file.php?file=dbCAN-HMMdb-V11.txt'],
-                            capture_output=True, text=True)
+    result = run(['wget',
+                  '-O', file_path,
+                  'https://pro.unl.edu/dbCAN2/download_file.php?file=dbCAN-HMMdb-V11.txt'],
+                  capture_output=True, text=True)
     
     if result.returncode != 0:
         return f"Download failed: {result.stderr}"
