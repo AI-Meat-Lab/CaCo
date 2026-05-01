@@ -1,0 +1,49 @@
+name: CaCo CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Miniconda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        environment-file: CaCo_env.yml
+        auto-activate-base: false
+        activate-environment: CaCo
+
+    - name: Install CaCo
+      shell: bash -l {0}
+      run: |
+        pip install -e .
+
+    - name: Download required database
+      shell: bash -l {0}
+      run: |
+        python3 CaCo.py -m download
+
+    - name: Run test suite
+      shell: bash -l {0}
+      run: |
+        # Example 1: if there is a shell script that runs all tests
+        if [ -f tests/run_all_tests.sh ]; then
+          chmod +x tests/run_all_tests.sh
+          ./tests/run_all_tests.sh
+        # Example 2: if using Python's unittest/pytest
+        elif [ -f tests/test_caco.py ]; then
+          python -m pytest tests/
+        # Example 3: explicit commands from README (adjust accordingly)
+        else
+          echo "No standard test script found. Running documented test commands..."
+          # Replace with actual commands from README
+          python3 CaCo.py -i examples/input.fasta -o test_output/
+          diff -r test_output/ expected_results/output_folder/
+        fi
