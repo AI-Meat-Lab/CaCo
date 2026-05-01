@@ -9,6 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -20,30 +21,82 @@ jobs:
         auto-activate-base: false
         activate-environment: CaCo
 
-    - name: Install CaCo
+    - name: Cache Conda environment
+      uses: actions/cache@v3
+      with:
+        path: ~/conda_pkgs_dir
+        key: ${{ runner.os }}-conda-${{ hashFiles('CaCo_env.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-conda-
+
+    - name: Install dependencies
       shell: bash -l {0}
       run: |
-        pip install -e .
+        conda env update -f CaCo_env.yml --prune
 
-    - name: Download required database
+    - name: Download database
       shell: bash -l {0}
       run: |
         python3 CaCo.py -m download
 
-    - name: Run test suite
+    - name: Run example commands
       shell: bash -l {0}
       run: |
-        # Example 1: if there is a shell script that runs all tests
-        if [ -f tests/run_all_tests.sh ]; then
-          chmod +x tests/run_all_tests.sh
-          ./tests/run_all_tests.sh
-        # Example 2: if using Python's unittest/pytest
-        elif [ -f tests/test_caco.py ]; then
-          python -m pytest tests/
-        # Example 3: explicit commands from README (adjust accordingly)
-        else
-          echo "No standard test script found. Running documented test commands..."
-          # Replace with actual commands from README
-          python3 CaCo.py -i examples/input.fasta -o test_output/
-          diff -r test_output/ expected_results/output_folder/
+        # Test 1: Genome groups (if gltest.txt exists)
+        if [ -f example/gltest.txt ]; then
+          python3 CaCo.py -m from_nucleotides -gl example/gltest.txt
         fi
+        
+        # Test 2: Pairwise comparison with contigs
+        if [ -f example/TARA_SAMEA2620259_METAG_HFKLHEHB.fa ] && [ -f example/TARA_SAMN05326651_METAG_RED00102.fa ]; then
+          python3 CaCo.py -m from_nucleotides -g1 example/TARA_SAMEA2620259_METAG_HFKLHEHB.fa -g2 example/TARA_SAMN05326651_METAG_RED00102.fa
+        fi
+        
+        # Test 3: Pairwise comparison with proteins
+        if [ -f example/TARA_SAMEA2620259_METAG_HFKLHEHB.faa ] && [ -f example/TARA_SAMN05326651_METAG_RED00102.faa ]; then
+          python3 CaCo.py -m from_proteins -g1 example/TARA_SAMEA2620259_METAG_HFKLHEHB.faa -g2 example/TARA_SAMN05326651_METAG_RED00102.faa
+        fi
+
+    - name: Validate output against expected results
+      shell: bash -l {0}
+      run: |
+        # Decompress expected competition output
+        if [ -f tests/expected_res/carboncomp_output.tsv.xz ]; then
+          unxz -c tests/expected_res/carboncomp_output.tsv.xz > expected_competition.tsv
+        fi
+        
+        # Compare allfams.tsv
+        if [ -f allfams.tsv ] && [ -f tests/expected_res/allfams.tsv ]; then
+          diff -u allfams.tsv tests/expected_res/allfams.tsv || \
+            (echo "❌ allfams.tsv does not match expected output" && exit 1)
+        else
+          echo "⚠️ Missing allfams.tsv or expected file"
+        fi
+        
+        # Compare allsubs.tsv
+        if [ -f allsubs.tsv ] && [ -f tests/expected_res/allsubs.tsv ]; then
+          diff -u allsubs.tsv tests/expected_res/allsubs.tsv || \
+            (echo "❌ allsubs.tsv does not match expected output" && exit 1)
+        else
+          echo "⚠️ Missing allsubs.tsv or expected file"
+        fi
+        
+        # Compare competition output
+        if [ -f carboncomp_output.tsv.xz ] && [ -f expected_competition.tsv ]; then
+          unxz -c carboncomp_output.tsv.xz > current_competition.tsv
+          diff -u current_competition.tsv expected_competition.tsv || \
+            (echo "❌ Competition output does not match expected results" && exit 1)
+        else
+          echo "⚠️ Missing competition output or expected file"
+        fi
+
+    - name: Upload test outputs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-outputs
+        path: |
+          allfams.tsv
+          allsubs.tsv
+          carboncomp_output.tsv.xz
+          *.tsv
