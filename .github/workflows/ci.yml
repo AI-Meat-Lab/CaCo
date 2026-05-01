@@ -2,7 +2,7 @@ name: CaCo CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "celiosantosjr-patch-1" ]
   pull_request:
     branches: [ "main" ]
 
@@ -34,59 +34,44 @@ jobs:
       run: |
         python3 CaCo.py -m download
 
-    # Check that the required example input files exist
-    - name: Verify example input files
+    - name: Download missing example input files
       shell: bash -l {0}
       run: |
-        MISSING=0
-        for f in example/gltest.txt \
-                 example/TARA_SAMEA2620259_METAG_HFKLHEHB.fa \
-                 example/TARA_SAMN05326651_METAG_RED00102.fa \
-                 example/TARA_SAMEA2620259_METAG_HFKLHEHB.faa \
-                 example/TARA_SAMN05326651_METAG_RED00102.faa; do
-          if [ ! -f "$f" ]; then
-            echo "❌ Missing required test file: $f"
-            MISSING=1
-          fi
-        done
-        if [ $MISSING -eq 1 ]; then
-          echo "Please add the missing example files to the repository or adjust the test paths."
-          exit 1
-        fi
+        mkdir -p example
+        cd example
+        # Download the required input files from the original CaCo repository
+        wget https://raw.githubusercontent.com/celiosantosjr/CaCo/main/example/gltest.txt
+        wget https://raw.githubusercontent.com/celiosantosjr/CaCo/main/example/TARA_SAMEA2620259_METAG_HFKLHEHB.fa
+        wget https://raw.githubusercontent.com/celiosantosjr/CaCo/main/example/TARA_SAMN05326651_METAG_RED00102.fa
+        wget https://raw.githubusercontent.com/celiosantosjr/CaCo/main/example/TARA_SAMEA2620259_METAG_HFKLHEHB.faa
+        wget https://raw.githubusercontent.com/celiosantosjr/CaCo/main/example/TARA_SAMN05326651_METAG_RED00102.faa
+        cd ..
 
     - name: Run example commands
       shell: bash -l {0}
       run: |
         # Test 1: Genome groups
-        echo "Running: genome groups test"
-        python3 CaCo.py -m from_nucleotides -gl tests/example/gltest.txt
+        python3 CaCo.py -m from_nucleotides -gl example/gltest.txt
         
         # Test 2: Pairwise contigs
-        echo "Running: pairwise contigs test"
-        python3 CaCo.py -m from_nucleotides -g1 tests/example/TARA_SAMEA2620259_METAG_HFKLHEHB.fa -g2 tests/example/TARA_SAMN05326651_METAG_RED00102.fa
+        python3 CaCo.py -m from_nucleotides -g1 example/TARA_SAMEA2620259_METAG_HFKLHEHB.fa -g2 example/TARA_SAMN05326651_METAG_RED00102.fa
         
         # Test 3: Pairwise proteins
-        echo "Running: pairwise proteins test"
-        python3 CaCo.py -m from_proteins -g1 tests/example/TARA_SAMEA2620259_METAG_HFKLHEHB.faa -g2 tests/example/TARA_SAMN05326651_METAG_RED00102.faa
+        python3 CaCo.py -m from_proteins -g1 example/TARA_SAMEA2620259_METAG_HFKLHEHB.faa -g2 example/TARA_SAMN05326651_METAG_RED00102.faa
 
     - name: Validate output against expected results
       shell: bash -l {0}
       run: |
-        # Decompress expected competition output if it exists
-        if [ -f tests/expected_res/carboncomp_output.tsv.xz ]; then
-          unxz -c tests/expected_res/carboncomp_output.tsv.xz > expected_competition.tsv
-        else
+        # Decompress expected competition output
+        if [ ! -f tests/expected_res/carboncomp_output.tsv.xz ]; then
           echo "❌ Expected file carboncomp_output.tsv.xz not found in tests/expected_res/"
           exit 1
         fi
+        unxz -c tests/expected_res/carboncomp_output.tsv.xz > expected_competition.tsv
         
         # Compare allfams.tsv
         if [ ! -f allfams.tsv ]; then
           echo "❌ Generated allfams.tsv not found"
-          exit 1
-        fi
-        if [ ! -f tests/expected_res/allfams.tsv ]; then
-          echo "❌ Expected allfams.tsv not found in tests/expected_res/"
           exit 1
         fi
         diff -u allfams.tsv tests/expected_res/allfams.tsv || \
@@ -95,10 +80,6 @@ jobs:
         # Compare allsubs.tsv
         if [ ! -f allsubs.tsv ]; then
           echo "❌ Generated allsubs.tsv not found"
-          exit 1
-        fi
-        if [ ! -f tests/expected_res/allsubs.tsv ]; then
-          echo "❌ Expected allsubs.tsv not found in tests/expected_res/"
           exit 1
         fi
         diff -u allsubs.tsv tests/expected_res/allsubs.tsv || \
