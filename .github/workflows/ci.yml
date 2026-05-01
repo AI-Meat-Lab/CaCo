@@ -59,15 +59,15 @@ jobs:
       run: |
         # Test 1: Genome groups
         echo "Running: genome groups test"
-        python3 CaCo.py -m from_nucleotides -gl example/gltest.txt
+        python3 CaCo.py -m from_nucleotides -gl tests/example/gltest.txt
         
         # Test 2: Pairwise contigs
         echo "Running: pairwise contigs test"
-        python3 CaCo.py -m from_nucleotides -g1 example/TARA_SAMEA2620259_METAG_HFKLHEHB.fa -g2 example/TARA_SAMN05326651_METAG_RED00102.fa
+        python3 CaCo.py -m from_nucleotides -g1 tests/example/TARA_SAMEA2620259_METAG_HFKLHEHB.fa -g2 tests/example/TARA_SAMN05326651_METAG_RED00102.fa
         
         # Test 3: Pairwise proteins
         echo "Running: pairwise proteins test"
-        python3 CaCo.py -m from_proteins -g1 example/TARA_SAMEA2620259_METAG_HFKLHEHB.faa -g2 example/TARA_SAMN05326651_METAG_RED00102.faa
+        python3 CaCo.py -m from_proteins -g1 tests/example/TARA_SAMEA2620259_METAG_HFKLHEHB.faa -g2 tests/example/TARA_SAMN05326651_METAG_RED00102.faa
 
     - name: Validate output against expected results
       shell: bash -l {0}
