@@ -34,62 +34,78 @@ jobs:
       run: |
         python3 CaCo.py -m download
 
-    - name: Download missing example input files
+    - name: List repository contents (debug)
       shell: bash -l {0}
       run: |
-        mkdir -p example
-        cd example
-        # Download the required input files from the original CaCo repository
-        wget https://raw.githubusercontent.com/celiosantosjr/CaCo/main/example/gltest.txt
-        wget https://raw.githubusercontent.com/celiosantosjr/CaCo/main/example/TARA_SAMEA2620259_METAG_HFKLHEHB.fa
-        wget https://raw.githubusercontent.com/celiosantosjr/CaCo/main/example/TARA_SAMN05326651_METAG_RED00102.fa
-        wget https://raw.githubusercontent.com/celiosantosjr/CaCo/main/example/TARA_SAMEA2620259_METAG_HFKLHEHB.faa
-        wget https://raw.githubusercontent.com/celiosantosjr/CaCo/main/example/TARA_SAMN05326651_METAG_RED00102.faa
-        cd ..
+        echo "=== Root directory ==="
+        ls -la
+        echo "=== Looking for example files ==="
+        find . -name "*.fa" -o -name "*.faa" -o -name "gltest.txt" | head -20
 
-    - name: Run example commands
+    - name: Run example commands (using local files)
       shell: bash -l {0}
       run: |
-        # Test 1: Genome groups
-        python3 CaCo.py -m from_nucleotides -gl example/gltest.txt
+        # Adjust these paths to match where your files actually are
+        # Common possibilities: ./example/ , ./tests/data/ , ./
+        GLTEST="example/gltest.txt"
+        FA1="example/TARA_SAMEA2620259_METAG_HFKLHEHB.fa"
+        FA2="example/TARA_SAMN05326651_METAG_RED00102.fa"
+        FAA1="example/TARA_SAMEA2620259_METAG_HFKLHEHB.faa"
+        FAA2="example/TARA_SAMN05326651_METAG_RED00102.faa"
         
-        # Test 2: Pairwise contigs
-        python3 CaCo.py -m from_nucleotides -g1 example/TARA_SAMEA2620259_METAG_HFKLHEHB.fa -g2 example/TARA_SAMN05326651_METAG_RED00102.fa
+        # Check existence
+        MISSING=0
+        for f in "$GLTEST" "$FA1" "$FA2" "$FAA1" "$FAA2"; do
+          if [ ! -f "$f" ]; then
+            echo "❌ Missing: $f"
+            MISSING=1
+          fi
+        done
+        if [ $MISSING -eq 1 ]; then
+          echo "Please update the paths in this workflow to match your repository structure."
+          exit 1
+        fi
         
-        # Test 3: Pairwise proteins
-        python3 CaCo.py -m from_proteins -g1 example/TARA_SAMEA2620259_METAG_HFKLHEHB.faa -g2 example/TARA_SAMN05326651_METAG_RED00102.faa
+        # Run tests
+        echo "Running genome groups test"
+        python3 CaCo.py -m from_nucleotides -gl "$GLTEST"
+        
+        echo "Running pairwise contigs test"
+        python3 CaCo.py -m from_nucleotides -g1 "$FA1" -g2 "$FA2"
+        
+        echo "Running pairwise proteins test"
+        python3 CaCo.py -m from_proteins -g1 "$FAA1" -g2 "$FAA2"
 
     - name: Validate output against expected results
       shell: bash -l {0}
       run: |
-        # Decompress expected competition output
-        if [ ! -f tests/expected_res/carboncomp_output.tsv.xz ]; then
-          echo "❌ Expected file carboncomp_output.tsv.xz not found in tests/expected_res/"
+        # Expected results are in tests/expected_res/
+        if [ ! -f tests/expected_res/allfams.tsv ]; then
+          echo "❌ Expected allfams.tsv not found in tests/expected_res/"
           exit 1
         fi
+        if [ ! -f tests/expected_res/allsubs.tsv ]; then
+          echo "❌ Expected allsubs.tsv not found in tests/expected_res/"
+          exit 1
+        fi
+        if [ ! -f tests/expected_res/carboncomp_output.tsv.xz ]; then
+          echo "❌ Expected carboncomp_output.tsv.xz not found in tests/expected_res/"
+          exit 1
+        fi
+        
+        # Decompress expected competition output
         unxz -c tests/expected_res/carboncomp_output.tsv.xz > expected_competition.tsv
         
-        # Compare allfams.tsv
-        if [ ! -f allfams.tsv ]; then
-          echo "❌ Generated allfams.tsv not found"
-          exit 1
-        fi
+        # Compare generated files (they appear in the current directory)
+        echo "Comparing allfams.tsv..."
         diff -u allfams.tsv tests/expected_res/allfams.tsv || \
           (echo "❌ allfams.tsv does not match expected output" && exit 1)
         
-        # Compare allsubs.tsv
-        if [ ! -f allsubs.tsv ]; then
-          echo "❌ Generated allsubs.tsv not found"
-          exit 1
-        fi
+        echo "Comparing allsubs.tsv..."
         diff -u allsubs.tsv tests/expected_res/allsubs.tsv || \
           (echo "❌ allsubs.tsv does not match expected output" && exit 1)
         
-        # Compare competition output
-        if [ ! -f carboncomp_output.tsv.xz ]; then
-          echo "❌ Generated carboncomp_output.tsv.xz not found"
-          exit 1
-        fi
+        echo "Comparing competition output..."
         unxz -c carboncomp_output.tsv.xz > current_competition.tsv
         diff -u current_competition.tsv expected_competition.tsv || \
           (echo "❌ Competition output does not match expected results" && exit 1)
