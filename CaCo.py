@@ -21,9 +21,41 @@ def get_file_path(infile):
 def download_db():
     ofolder = get_file_path('data/')
     os.makedirs(ofolder, exist_ok=True)
-    run(['wget',
-         '-O', f'{ofolder}/dbcan.hmm',
-         'https://pro.unl.edu/dbCAN2/download_file.php?file=dbCAN-HMMdb-V11.txt'])
+    file_path = f'{ofolder}/dbcan.hmm'
+    
+    # Download the file
+    result = run(['wget',
+                  '-O', file_path,
+                  'https://pro.unl.edu/dbCAN2/download_file.php?file=dbCAN-HMMdb-V11.txt'],
+                  capture_output=True, text=True)
+    
+    if result.returncode != 0:
+        return f"Download failed: {result.stderr}"
+    
+    # Check file content
+    try:
+        with open(file_path, 'r') as f:
+            # Read first line (or enough to see the header)
+            first_line = f.readline().strip()
+            # The expected header is exactly "HMMER3/b [3.0 | March 2010]"
+            if not first_line.startswith("HMMER3/b [3.0 | March 2010]"):
+                return "Database was not properly downloaded: incorrect file header"
+            
+            # Move to the end of file to check trailing "//"
+            f.seek(0, os.SEEK_END)
+            file_size = f.tell()
+            if file_size < 2:
+                return "Database was not properly downloaded: file too short"
+            
+            # Read the last few bytes (allow for trailing newline)
+            f.seek(max(0, file_size - 10), os.SEEK_SET)
+            tail = f.read()
+            # Remove trailing whitespace and check if ends with "//"
+            if not tail.rstrip().endswith("//"):
+                return "Database was not properly downloaded: missing end marker"
+    
+    except Exception as e:
+        return f"Database was not properly downloaded: error reading file - {e}"
 
 
 def dbcansearch(infile, ofolder, db):
@@ -132,20 +164,26 @@ def RPS(infile, ofile):
                 x = '\t'.join(x)
                 ofile.write(f'{x}\n')
     
-    
 def extract_feat(infolder, subs):
-    with open(f'allfams.tsv', 'a+') as handle:
+    # Use write mode to overwrite any previous file
+    with open('allfams.tsv', 'w') as handle:
         handle.write('genome\tfamilies\n')
-        with open(f'allsubs.tsv', 'a+') as handle1:
+        with open('allsubs.tsv', 'w') as handle1:
             handle1.write('genome\tsubstrates\n')
             for infile in tqdm(glob(f'{infolder}/*.dbcan.parsed')):
                 namea = infile.split('/')[-1].replace('.dbcan.parsed', '')
                 a = pd.read_table(infile)
                 a = set(a.Hit_Name)
                 a = {x.split('_')[0] for x in a}
+                # Sort families alphabetically
+                sorted_families = sorted(a)
+                
                 subsa = set(', '.join([subs.get(y, '') for y in a if y in subs]).split(', '))
-                handle.write(f"{namea}\t{', '.join(a)}\n")
-                handle1.write(f"{namea}\t{', '.join(subsa)}\n")
+                # Sort substrates alphabetically
+                sorted_substrates = sorted(subsa)
+                
+                handle.write(f"{namea}\t{', '.join(sorted_families)}\n")
+                handle1.write(f"{namea}\t{', '.join(sorted_substrates)}\n")
 
 
 def calculate_overlap_probability(n1, n2, k, num_trials=1000):
