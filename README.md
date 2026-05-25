@@ -1,4 +1,11 @@
 # CaCo
+
+[![DBcan Database](https://img.shields.io/badge/DBcan-Database-blue)](https://bcb.unl.edu/dbCAN2/)
+[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![GitHub issues](https://img.shields.io/github/issues/celiosantosjr/CaCo)](https://github.com/celiosantosjr/CaCo/issues)
+[![CI](https://github.com/celiosantosjr/CaCo/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/celiosantosjr/CaCo/actions)
+
 CaCo: A program for predicting carbon source competition and ecological type of interaction from genomes.
 
 ## Installation
