@@ -8,6 +8,8 @@
 
 CaCo: A program for predicting carbon source competition and ecological type of interaction from genomes.
 
+This is a clone of the [original repository](https://github.com/celiosantosjr/CaCo) from the program published in our [PNAS paper](https://www.pnas.org/doi/10.1073/pnas.2526391123).
+
 ## Installation
 
 First download the repository:
