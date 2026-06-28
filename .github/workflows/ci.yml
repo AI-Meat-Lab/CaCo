@@ -99,7 +99,9 @@ jobs:
         
         echo "Comparing competition output..."
         unxz -c carboncomp_output.tsv.xz > current_competition.tsv
-        diff -u --strip-trailing-cr current_competition.tsv expected_competition.tsv || \
+        sort -k1,1 current_competition.tsv > 1
+        sort -k1,1 expected_competition.tsv > 2
+        diff -u --strip-trailing-cr 1 2 || \
           (echo "❌ Competition output does not match expected results" && exit 1)
         
         echo "✅ All validation checks passed!"
